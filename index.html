@@ -1,0 +1,2449 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>MUSE — The Issue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Caveat:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14100c; --paper:#f7f1e6; --red:#c8102e; --muted:#6a6156;
+    --serif:"Playfair Display", Georgia, serif;
+    --body:"EB Garamond", Georgia, serif;
+    --hand:"Caveat", cursive;
+    --sans:"Inter", Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:radial-gradient(120% 80% at 50% 0%, #2a2320 0%, #171310 45%, #0d0b09 100%);
+    color:var(--ink); font-family:var(--body); overflow:hidden;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background:radial-gradient(60% 50% at 50% 45%, rgba(255,220,170,.10), transparent 70%);
+  }
+
+  .stage{
+    position:fixed; inset:0;
+    display:grid; place-items:center;
+    padding: 26px 16px 92px;
+  }
+  .book{
+    --w: min(430px, 86vw, 54vh);
+    position:relative;
+    width:var(--w);
+    height:calc(var(--w) * 1.414);
+    perspective: 2100px;
+    perspective-origin: 60% 50%;
+  }
+
+  .page{
+    position:absolute; inset:0;
+    background-color:var(--paper);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.055'/%3E%3C/svg%3E");
+    border-radius:2px 5px 5px 2px;
+    box-shadow:0 1px 0 rgba(0,0,0,.05), 0 30px 60px -22px rgba(0,0,0,.55);
+    transform-origin:left center;
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+    transition:transform .82s cubic-bezier(.58,.05,.28,1);
+    will-change:transform;
+    overflow:hidden;
+    color:var(--ink);
+    font-size:15px;
+  }
+  .page::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:22px; z-index:2;
+    pointer-events:none;
+    background:linear-gradient(90deg, rgba(70,45,20,.15), rgba(70,45,20,0));
+  }
+  .page::after{
+    content:""; position:absolute; inset:0; z-index:3; pointer-events:none;
+    background:linear-gradient(90deg, rgba(0,0,0,.30), rgba(0,0,0,0) 65%);
+    opacity:0; transition:opacity .45s ease;
+  }
+  .page.flipping::after{opacity:1;}
+  .page.is-past{transform:rotateY(-180deg);}
+  .page.is-active,.page.is-future{transform:rotateY(0deg);}
+
+  .page-inner{
+    position:absolute; inset:0;
+    padding:26px 24px 42px;
+    display:flex; flex-direction:column;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  
+  .page-inner::-webkit-scrollbar { width: 0px; }
+  .page-inner { scrollbar-width: none; }
+
+  .kicker{
+    font-family:var(--sans); font-size:9px; letter-spacing:.24em;
+    text-transform:uppercase; color:var(--red);
+    flex-shrink: 0;
+  }
+  .folio{
+    position:absolute; left:24px; right:24px; bottom:16px;
+    display:flex; justify-content:space-between;
+    font-family:var(--sans); font-size:9px; letter-spacing:.2em;
+    text-transform:uppercase; color:var(--muted);
+    pointer-events: none;
+    z-index: 10;
+  }
+  .rule{height:1px; background:var(--ink); opacity:.85; margin:8px 0 14px; flex-shrink: 0;}
+  h2.head{
+    font-family:var(--serif); font-weight:700; font-style:italic;
+    font-size:26px; line-height:1.04; margin:0 0 10px; letter-spacing:-.015em;
+    flex-shrink: 0;
+  }
+  h2.head em{font-style:normal;}
+  .deck{
+    font-family:var(--body); font-style:italic; color:var(--muted);
+    font-size:13px; line-height:1.45; margin:0 0 14px;
+    flex-shrink: 0;
+  }
+  .hand{font-family:var(--hand); color:var(--ink);}
+
+  /* ============ INTERACTIVE BOX PAGE ============ */
+  .box-page {
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle at center, #2a2320, #0d0b09);
+    overflow: hidden;
+  }
+  .gift-box {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+  }
+  .gift-box:active {
+    transform: scale(0.95);
+  }
+  .box-body {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 140px;
+    background: #e8d8c8;
+    border-radius: 4px;
+    box-shadow: inset 0 -10px 20px rgba(0,0,0,0.1), 0 10px 20px rgba(0,0,0,0.4);
+  }
+  .box-lid {
+    position: absolute;
+    top: 20px;
+    left: -5px;
+    width: 190px;
+    height: 30px;
+    background: #f7f1e6;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transform-origin: left bottom;
+    transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 2;
+  }
+  .box-ribbon-v {
+    position: absolute;
+    left: 50%;
+    top: 0; bottom: 0;
+    width: 30px;
+    transform: translateX(-50%);
+    background: var(--red);
+    z-index: 1;
+  }
+  .box-ribbon-h {
+    position: absolute;
+    top: 60px;
+    left: 0; right: 0;
+    height: 30px;
+    background: var(--red);
+    z-index: 1;
+  }
+  .box-bow {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 60px;
+    line-height: 1;
+    z-index: 3;
+    transition: opacity 0.5s, transform 0.5s;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+  }
+  .box-hint {
+    position: absolute;
+    bottom: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--hand);
+    font-size: 20px;
+    color: #f7f1e6;
+    white-space: nowrap;
+    opacity: 0.8;
+    animation: pulseHint 2s infinite;
+  }
+  @keyframes pulseHint {
+    0%, 100% { opacity: 0.5; transform: translate(-50%, 0); }
+    50% { opacity: 1; transform: translate(-50%, 5px); }
+  }
+  .box-glow {
+    position: absolute;
+    top: 10%; left: 10%; right: 10%; bottom: 10%;
+    background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,220,170,0) 70%);
+    opacity: 0;
+    transition: opacity 1s ease 0.5s;
+    z-index: 0;
+    pointer-events: none;
+  }
+  
+  /* Animation when opened */
+  .gift-box.untied .box-bow {
+    opacity: 0;
+    transform: translate(-50%, -50px) scale(0.5);
+  }
+  .gift-box.untied .box-ribbon-v {
+    opacity: 0;
+    transform: translateX(-50%) translateY(50px);
+    transition: all 0.5s ease;
+  }
+  .gift-box.untied .box-ribbon-h {
+    opacity: 0;
+    transform: translateY(50px);
+    transition: all 0.5s ease;
+  }
+  .gift-box.untied .box-lid {
+    transform: rotateX(-110deg) translateY(-10px);
+  }
+  .gift-box.untied .box-glow {
+    opacity: 1;
+  }
+  .gift-box.untied .box-hint {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .enter-btn {
+    margin-top: 40px;
+    padding: 14px 28px;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 30px;
+    font-family: var(--sans);
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(200,16,46,0.3);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.5s ease;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .gift-box.untied ~ .enter-btn {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition-delay: 1s;
+  }
+
+  /* ============ COVER ============ */
+  .cover{justify-content:space-between; align-items:center; text-align:center; padding-top:22px;}
+  .cover-top{
+    width:100%; display:flex; justify-content:space-between;
+    font-family:var(--sans); font-size:8.5px; letter-spacing:.24em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  .masthead{
+    font-family:var(--serif); font-weight:900;
+    font-size:62px; line-height:.85; letter-spacing:-.045em;
+    margin:0; text-align:center; width:100%;
+  }
+  .masthead sup{
+    font-size:.24em; vertical-align:top; color:var(--red);
+    font-weight:700; letter-spacing:-.02em; margin-left:2px;
+  }
+  .cover-rule{width:100%; height:1.5px; background:var(--ink); margin:6px 0 8px;}
+  .cover-issue{
+    font-family:var(--serif); font-style:italic; font-size:15px; margin-bottom:6px;
+  }
+  .cover-issue em{font-style:normal; font-weight:700;}
+  .cover-art{
+    position:relative; width:100%; flex:1;
+    display:grid; place-items:center; min-height:0;
+  }
+  .cover-photo{
+    position:relative;
+    height:100%;
+    aspect-ratio: 3 / 4;
+    max-height:100%;
+    overflow:hidden;
+    border-radius:2px;
+    display:grid; place-items:center;
+  }
+  .cover-photo img{
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; z-index:2; display:block;
+  }
+  .cover-photo svg{
+    position:absolute; inset:0;
+    height:100%; width:auto; max-width:100%;
+    color:var(--ink); opacity:.92; z-index:1;
+  }
+  .art-branch{
+    position:absolute; height:70%; width:auto; color:var(--ink);
+    opacity:.5; bottom:0; z-index:0;
+  }
+  .art-branch.left{left:-6px; transform:rotate(-8deg);}
+  .art-branch.right{right:-6px; transform:scaleX(-1) rotate(-8deg);}
+  .cover-note{
+    font-family:var(--hand); font-size:16px; color:var(--muted);
+    transform:rotate(-2.5deg); margin:8px 0 2px;
+  }
+  .cover-hint{
+    font-family:var(--sans); font-size:8.5px; letter-spacing:.26em;
+    text-transform:uppercase; color:var(--ink); margin-top:2px;
+  }
+  .cover-hint span{display:inline-block; animation:nudge 1.6s ease-in-out infinite;}
+  @keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(5px)}}
+
+  /* ============ GENERIC TYPE ============ */
+  .letter p{font-size:13px; line-height:1.5; margin:0 0 9px;}
+  .letter p:first-of-type::first-letter{
+    font-family:var(--serif); font-weight:900;
+    float:left; font-size:44px; line-height:.78;
+    padding:4px 8px 0 0;
+  }
+  .signature{
+    font-family:var(--hand); font-size:19px; margin-top:auto; line-height:1.15;
+    padding-bottom: 20px;
+  }
+  .signature small{
+    display:block; font-family:var(--sans); font-size:8px;
+    letter-spacing:.2em; text-transform:uppercase; color:var(--muted);
+    margin-top:4px;
+  }
+
+  /* ============ TOC ============ */
+  .toc{list-style:none; margin:0; padding:0;}
+  .toc li{
+    display:flex; align-items:baseline; gap:8px;
+    padding:4px 0; border-bottom:1px dotted rgba(20,16,12,.25);
+    font-size:11.5px; cursor:pointer;
+    transition:padding-left .2s ease;
+  }
+  .toc li:hover{padding-left:4px;}
+  .toc li:last-child{border-bottom:none;}
+  .toc .n{
+    font-family:var(--sans); font-size:8px; letter-spacing:.14em;
+    color:var(--red); min-width:18px;
+  }
+  .toc .t{font-family:var(--serif); font-style:italic; font-size:13px;}
+  .toc .d{
+    margin-left:auto; font-family:var(--hand); font-size:12px; color:var(--muted);
+  }
+  .toc-doodle{
+    display:flex; gap:10px; justify-content:center; margin-top:auto;
+    color:var(--ink); opacity:.55;
+  }
+  .toc-doodle svg{height:20px; width:auto;}
+
+  /* ============ REASONS ============ */
+  .reasons{list-style:none; margin:0; padding:0;}
+  .reasons li{
+    display:grid; grid-template-columns:32px 1fr; gap:8px;
+    padding:10px 0; border-top:1px solid rgba(20,16,12,.18);
+  }
+  .reasons li:last-child{border-bottom:1px solid rgba(20,16,12,.18);}
+  .reasons .num{
+    font-family:var(--serif); font-weight:700; font-size:18px;
+    color:var(--red); line-height:1.05;
+  }
+  .reasons h3{
+    margin:0 0 2px; font-family:var(--serif); font-weight:700;
+    font-size:14.5px; line-height:1.15; letter-spacing:-.01em;
+  }
+  .reasons p{
+    margin:0; font-style:italic; color:var(--muted);
+    font-size:12px; line-height:1.4;
+  }
+  .reasons.big li{padding:16px 0;}
+  .reasons.big .num{font-size:24px;}
+  .reasons.big h3{font-size:17px;}
+  .reasons.big p{font-size:13.5px;}
+
+  /* ============ PORTRAIT SHOTS ============ */
+  .shots{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    margin-top:4px; flex:1; min-height:0;
+  }
+  .shot{margin:0; display:flex; flex-direction:column; min-height:0;}
+  .shot.big{grid-column:span 2;}
+  .shot-inner{
+    flex:1; min-height:0;
+    background:transparent;
+    display:grid; place-items:center; overflow:hidden;
+    position:relative;
+  }
+  .shot-inner img{
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; display:block; z-index:2;
+  }
+  .shot-inner svg{
+    height:100%; width:auto; max-width:100%;
+    color:var(--ink); opacity:.9; z-index:1;
+  }
+  .shot figcaption{
+    font-family:var(--sans); font-size:7.5px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--muted);
+    margin-top:5px; display:flex; justify-content:space-between; gap:6px;
+  }
+
+  /* ============ QUOTE ============ */
+  .quote-page{justify-content:center; align-items:center; text-align:center;}
+  .quote-mark{
+    font-family:var(--serif); font-size:70px; line-height:.6;
+    color:var(--red); opacity:.5; margin-bottom:6px;
+  }
+  .quote-page blockquote{
+    margin:0; font-family:var(--serif); font-style:italic;
+    font-size:22px; line-height:1.28; letter-spacing:-.01em;
+  }
+  .quote-page cite{
+    display:block; margin-top:18px; font-family:var(--sans);
+    font-style:normal; font-size:8.5px; letter-spacing:.24em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  .quote-orn{display:flex; gap:10px; margin-top:22px; color:var(--ink); opacity:.5;}
+  .quote-orn svg{height:16px; width:auto;}
+
+  /* ============ HANDWRITTEN ============ */
+  .letter-paper{
+    flex:1; min-height:0;
+    background-image:repeating-linear-gradient(
+      180deg, transparent 0, transparent 25px,
+      rgba(20,16,12,.14) 25px, rgba(20,16,12,.14) 26px
+    );
+    background-position:0 4px; padding-top:2px;
+    padding-bottom: 20px;
+  }
+  .letter-paper p{
+    font-family:var(--hand); font-size:16.5px; line-height:26px;
+    margin:0; color:var(--ink);
+  }
+
+  /* ============ FINAL ============ */
+  .final-page{justify-content:center; text-align:center;}
+  .final-page h2{
+    font-family:var(--serif); font-style:italic; font-weight:700;
+    font-size:24px; line-height:1.06; margin:0 0 10px; letter-spacing:-.015em;
+  }
+  .final-page h2 em{font-style:normal;}
+  .final-page .deck{margin:0 auto; max-width:250px;}
+  .flip-btn{
+    margin-top:20px; display:inline-block;
+    padding:13px 22px; background:transparent; color:var(--ink);
+    border:1.4px solid var(--ink); border-radius:0;
+    font-family:var(--sans); font-size:9px; letter-spacing:.24em;
+    text-transform:uppercase; cursor:pointer;
+    transition:background .3s, color .3s;
+  }
+  .flip-btn:hover{background:var(--ink); color:var(--paper);}
+
+  /* ============ BACK COVER ============ */
+  .back-cover{justify-content:center; align-items:center; text-align:center;}
+  .back-cover .masthead{font-size:40px; letter-spacing:-.03em;}
+  .back-cover .end{
+    font-family:var(--hand); font-size:20px; color:var(--muted);
+    margin-top:10px; transform:rotate(-2deg);
+  }
+  .back-cover .heart{margin-top:auto; color:var(--red); opacity:.9; padding-bottom: 20px;}
+  .back-cover .heart svg{height:26px; width:auto;}
+  .back-cover .fine{
+    font-family:var(--sans); font-size:7.5px; letter-spacing:.24em;
+    text-transform:uppercase; color:var(--muted); margin-top:8px;
+    padding-bottom: 20px;
+  }
+
+  /* ============ TRACKLIST ============ */
+  .tracklist{list-style:none; margin:0; padding:0;}
+  .tracklist li{
+    display:grid; grid-template-columns:24px 1fr auto;
+    gap:8px; padding:9px 0;
+    border-bottom:1px dotted rgba(20,16,12,.22);
+    align-items:baseline; font-size:12px;
+  }
+  .tracklist li:last-child{border-bottom:none;}
+  .tracklist .n{
+    font-family:var(--sans); font-size:9px; letter-spacing:.14em; color:var(--red);
+  }
+  .tracklist .t{font-family:var(--serif); font-style:italic; font-size:13.5px;}
+  .tracklist .d{font-family:var(--hand); font-size:13px; color:var(--muted);}
+
+  /* ============ AD ============ */
+  .ad-box{
+    border:1.5px solid var(--ink); padding:18px 16px;
+    text-align:center; position:relative; margin:12px 0;
+  }
+  .ad-box::before{
+    content:"реклама"; position:absolute; top:-8px; left:50%;
+    transform:translateX(-50%); background:var(--paper); padding:0 8px;
+    font-family:var(--sans); font-size:7.5px; letter-spacing:.24em;
+    color:var(--muted); text-transform:uppercase;
+  }
+  .ad-brand{
+    font-family:var(--serif); font-weight:900;
+    font-size:22px; letter-spacing:-.02em; margin:6px 0 2px;
+  }
+  .ad-tag{
+    font-family:var(--sans); font-size:8.5px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--red); margin-bottom:10px;
+  }
+  .ad-box p{
+    font-family:var(--body); font-style:italic;
+    font-size:12px; line-height:1.45; color:var(--muted); margin:6px 0;
+  }
+  .ad-cta{
+    font-family:var(--sans); font-size:9px; letter-spacing:.24em;
+    text-transform:uppercase; color:var(--ink);
+    margin-top:12px; border-top:1px solid var(--ink); padding-top:10px;
+  }
+
+  /* ============ NOTES ============ */
+  .notes{list-style:none; margin:0; padding:0;}
+  .notes li{
+    padding:10px 0 10px 20px;
+    border-bottom:1px dotted rgba(20,16,12,.22);
+    font-family:var(--body); font-style:italic;
+    font-size:13px; line-height:1.4; position:relative;
+  }
+  .notes li:last-child{border-bottom:none;}
+  .notes li::before{
+    content:"—"; position:absolute; left:0; color:var(--red);
+  }
+
+  /* ============ READER LETTERS ============ */
+  .rletters{list-style:none; margin:0; padding:0;}
+  .rletters li{
+    padding:10px 0; border-bottom:1px solid rgba(20,16,12,.18);
+  }
+  .rletters li:last-child{border-bottom:none;}
+  .rletters .from{
+    font-family:var(--body); font-style:italic;
+    font-size:12px; color:var(--ink); margin:0 0 4px;
+  }
+  .rletters .reply{
+    font-family:var(--body); font-size:11.5px;
+    color:var(--muted); padding-left:10px; margin:0;
+    border-left:1px solid rgba(20,16,12,.3);
+  }
+
+  /* ============ RECIPE ============ */
+  .recipe-block{margin:8px 0 12px;}
+  .recipe-label{
+    font-family:var(--sans); font-size:8.5px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--red); margin-bottom:4px;
+  }
+  .recipe-body{
+    font-family:var(--body); font-style:italic;
+    font-size:12.5px; line-height:1.5; color:var(--ink); margin:0;
+  }
+
+  /* ============ DEDICATION (DRAWING CANVAS) ============ */
+  .dedication-page{justify-content:flex-start; align-items:center; text-align:center; padding-top:32px;}
+  .dedication-page h2{
+    font-family:var(--serif); font-style:italic;
+    font-size:20px; margin:0 0 10px; line-height:1.15;
+  }
+  .dedication-page h2 em{font-style:normal; font-weight:700;}
+  .dedication-page > p{
+    font-family:var(--hand); font-size:15px;
+    color:var(--muted); margin:0 auto 6px; max-width:260px;
+    line-height:1.4;
+  }
+  .dedication-photo{
+    width:75%; aspect-ratio:4/5;
+    margin:16px auto;
+    position:relative;
+    background: rgba(255,255,255,0.5);
+    border: 1.5px dashed rgba(20,16,12,.3);
+    border-radius: 8px;
+    overflow:hidden;
+    display:grid; place-items:center;
+  }
+  .dedication-photo canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    touch-action: none;
+    cursor: crosshair;
+  }
+  .clear-btn {
+    position: absolute;
+    bottom: 10px; right: 10px;
+    z-index: 10;
+    padding: 6px 12px;
+    background: rgba(20,16,12,0.6);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    font-family: var(--sans);
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .clear-btn:hover { background: rgba(20,16,12,0.9); }
+
+  /* ============ HUG PAGE ============ */
+  .hug-page { justify-content: center; align-items: center; text-align: center; }
+  .hug-page .heart-icon {
+    width: 100px; height: 100px; color: var(--red);
+    transition: transform 0.3s, fill 0.3s;
+    margin-bottom: 20px;
+  }
+  .hug-btn {
+    padding: 16px 32px;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 30px;
+    font-family: var(--sans);
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(200,16,46,0.3);
+    transition: all 0.3s ease;
+  }
+  .hug-btn:active { transform: scale(0.95); }
+  .hug-message {
+    margin-top: 30px;
+    font-family: var(--hand);
+    font-size: 22px;
+    color: var(--red);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.5s ease;
+  }
+  .hug-message.show { opacity: 1; transform: translateY(0); }
+
+  /* ============ LOVE COUNTER ============ */
+  .love-counter {
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    margin-top: 20px;
+  }
+  .love-count-display {
+    font-family: var(--serif);
+    font-size: 40px;
+    color: var(--red);
+    font-weight: 700;
+    transition: transform 0.1s;
+  }
+  .love-count-display.bump { transform: scale(1.15); }
+  .love-btn {
+    padding: 12px 24px;
+    background: transparent;
+    color: var(--ink);
+    border: 1.5px solid var(--ink);
+    border-radius: 30px;
+    font-family: var(--sans);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .love-btn:active { background: var(--ink); color: var(--paper); }
+
+  /* ============ FLOATING HEARTS ============ */
+  .floating-heart {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    font-size: 24px;
+    animation: floatUp 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
+  @keyframes floatUp {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+    100% { transform: translate(-50%, -150px) scale(1.5); opacity: 0; }
+  }
+
+  /* ============ SPOTIFY PLAYER PAGE ============ */
+  .page.page-dark {
+    background-color: #0d1616;
+    background-image: none;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    border: none;
+  }
+  .page.page-dark::before { display: none; }
+  
+  .page.page-dark .page-inner {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .page.page-dark .page-inner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url('photos/audio-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    filter: blur(15px) brightness(0.4);
+    transform: scale(1.1);
+    z-index: 0;
+  }
+
+  .spotify-ui {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .spotify-top {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+  .spotify-cover {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    flex-shrink: 0;
+  }
+  .spotify-cover img { width: 100%; height: 100%; object-fit: cover; }
+  
+  .spotify-info { flex: 1; min-width: 0; }
+  .spotify-title { font-size: 20px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;}
+  .spotify-artist { font-size: 13px; color: #a0b0b0; }
+  .spotify-heart { font-size: 22px; color: #a0b0b0; cursor: pointer; padding: 4px; }
+
+  .spotify-progress-container {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    font-size: 10px; color: #a0b0b0; font-family: var(--sans);
+  }
+  .spotify-bar-bg {
+    flex: 1; height: 4px; background: rgba(255,255,255,0.2);
+    border-radius: 2px; position: relative; cursor: pointer;
+  }
+  .spotify-bar-fill {
+    height: 100%; background: #1db954; border-radius: 2px; width: 0%;
+    position: relative;
+  }
+  .spotify-bar-dot {
+    position: absolute; top: 50%; right: 0; transform: translate(50%, -50%);
+    width: 10px; height: 10px; background: #fff; border-radius: 50%;
+    display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .spotify-bar-bg:hover .spotify-bar-dot { display: block; }
+
+  .spotify-controls {
+    display: flex; justify-content: center; align-items: center; gap: 24px;
+    margin-bottom: 16px;
+  }
+  .spotify-icon { width: 20px; height: 20px; color: #d1e0e0; cursor: pointer; }
+  .spotify-play {
+    width: 56px; height: 56px; border-radius: 50%; background: #fff;
+    display: grid; place-items: center; border: none; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: transform 0.1s;
+  }
+  .spotify-play:active { transform: scale(0.95); }
+  .spotify-play svg { width: 24px; height: 24px; color: #000; margin-left: 2px; }
+  #pauseIcon { margin-left: 0; }
+
+  .spotify-lyrics-wrapper {
+    flex: 1;
+    min-height: 0;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 16px;
+    padding: 16px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .lyrics-label {
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: #1db954; margin-bottom: 8px; flex-shrink: 0;
+  }
+  
+  .lyrics-scroll {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    padding: 50% 0;
+    touch-action: pan-y;
+    mask-image: linear-gradient(180deg, transparent 0%, #000 15%, #000 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 15%, #000 85%, transparent 100%);
+    scrollbar-width: none;
+  }
+  .lyrics-scroll::-webkit-scrollbar { display: none; }
+
+  .lyric-line {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.4;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 16px;
+    transition: color 0.3s ease, font-size 0.3s ease;
+    text-align: left;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: pre-wrap;
+  }
+  .lyric-line:hover { color: rgba(255,255,255,0.7); }
+  .lyric-line.active {
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  /* Вынесенная кнопка кино */
+  .next-cinema-btn {
+    position: relative;
+    z-index: 10;
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    border-radius: 16px;
+    font-family: var(--sans);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    width: 100%;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+  .next-cinema-btn:hover { background: rgba(255,255,255,0.15); }
+  .next-cinema-btn:active { transform: scale(0.98); }
+
+  /* ============ CINEMA PAGE ============ */
+  .page.page-cinema {
+    background: #050505;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    border: none;
+  }
+  .page.page-cinema::before { display: none; }
+  
+  .cinema-inner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+    border-radius: 24px;
+  }
+  
+  .cinema-light {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.12) 0%, transparent 70%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .page-cinema.is-active .cinema-light {
+    animation: lightUp 3s forwards;
+  }
+  @keyframes lightUp {
+    0% { opacity: 0; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  .cinema-grain {
+    position: absolute;
+    inset: -50%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.08;
+    pointer-events: none;
+    animation: grain 0.2s steps(2) infinite;
+    z-index: 1;
+  }
+  @keyframes grain {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-5%, -10%); }
+    20% { transform: translate(-15%, 5%); }
+    30% { transform: translate(7%, -25%); }
+    40% { transform: translate(-5%, 25%); }
+    50% { transform: translate(-15%, 10%); }
+    60% { transform: translate(15%, 0%); }
+    70% { transform: translate(0%, 15%); }
+    80% { transform: translate(3%, 35%); }
+    90% { transform: translate(-10%, 10%); }
+  }
+
+  .cinema-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 20px;
+  }
+
+  .cinema-title {
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.5em;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 50px;
+    opacity: 0;
+  }
+  .page-cinema.is-active .cinema-title {
+    animation: fadeIn 2s forwards 1s;
+  }
+
+  .cinema-heart {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  .page-cinema.is-active .cinema-heart {
+    animation: popHeart 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards 3s;
+  }
+  .cinema-heart svg {
+    width: 80px; height: 80px;
+    color: var(--red);
+    filter: drop-shadow(0 0 15px rgba(200,16,46,0.6));
+  }
+  @keyframes popHeart {
+    0% { opacity: 0; transform: scale(0.5); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes pulseHeart {
+    0% { filter: drop-shadow(0 0 10px rgba(200,16,46,0.4)); transform: scale(1); }
+    100% { filter: drop-shadow(0 0 30px rgba(200,16,46,1)); transform: scale(1.05); }
+  }
+  .page-cinema.is-active .cinema-heart svg {
+    animation: pulseHeart 1.5s infinite alternate 5s;
+  }
+
+  .cinema-text {
+    margin-top: 40px;
+    font-family: var(--serif);
+    font-style: italic;
+    color: #fff;
+    line-height: 1.5;
+    min-height: 120px;
+  }
+  .cinema-text span {
+    display: block;
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  .cinema-text .line1 {
+    font-size: 22px;
+    margin-bottom: 15px;
+  }
+  .cinema-text .line2 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #c8102e;
+    text-shadow: 0 0 15px rgba(200,16,46,0.5);
+  }
+  .page-cinema.is-active .cinema-text .line1 {
+    animation: textReveal 1.5s forwards 6s;
+  }
+  .page-cinema.is-active .cinema-text .line2 {
+    animation: textReveal 1.5s forwards 8.5s;
+  }
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+  @keyframes textReveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .cinema-end {
+    margin-top: 50px;
+    font-family: var(--hand);
+    font-size: 20px;
+    color: rgba(255,255,255,0.6);
+    opacity: 0;
+  }
+  .page-cinema.is-active .cinema-end {
+    animation: fadeIn 2s forwards 12s;
+  }
+
+  /* ============ CONTROLS ============ */
+  .controls{
+    position:fixed; left:0; right:0; bottom:0; z-index:50;
+    display:flex; align-items:center; justify-content:center; gap:18px;
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(0deg, rgba(13,11,9,.95), rgba(13,11,9,0));
+    pointer-events:none;
+  }
+  .controls > *{pointer-events:auto;}
+  .nav-btn{
+    width:42px; height:42px; border-radius:50%;
+    border:1px solid rgba(247,241,230,.35);
+    background:rgba(247,241,230,.06);
+    color:#f7f1e6; cursor:pointer;
+    display:grid; place-items:center;
+    transition:background .25s, border-color .25s, opacity .25s;
+  }
+  .nav-btn:hover{background:rgba(247,241,230,.16); border-color:rgba(247,241,230,.7);}
+  .nav-btn:disabled{opacity:.22; cursor:default;}
+  .nav-btn svg{width:15px; height:15px;}
+  .counter{
+    font-family:var(--sans); font-size:10px; letter-spacing:.26em;
+    color:rgba(247,241,230,.75); min-width:82px; text-align:center;
+  }
+  .counter b{color:#f7f1e6; font-weight:600;}
+
+  @media (max-width:420px){
+    .page{font-size:13.5px;}
+    .masthead{font-size:54px;}
+    .page-inner{padding:22px 20px 38px;}
+    .folio{left:20px; right:20px;}
+    .cover-issue{font-size:13px;}
+    .reasons h3{font-size:13.5px;}
+    .reasons p{font-size:11.5px;}
+    .quote-page blockquote{font-size:20px;}
+    h2.head{font-size:24px;}
+  }
+  @media (max-height:640px){
+    .stage{padding-bottom:78px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- SVG LIBRARY -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="face" viewBox="0 0 200 280">
+      <g fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M100 32c-31 0-47 25-47 59 0 31 6 53 16 69 8 13 19 22 31 22s23-9 31-22c10-16 16-38 16-69 0-34-16-59-47-59z"/>
+        <path d="M53 92c-6-35 9-68 47-68s53 33 47 68"/>
+        <path d="M54 86c-3 24-1 47 4 64"/>
+        <path d="M146 86c3 24 1 47-4 64"/>
+        <path d="M77 110c4-4 11-4 15 0"/>
+        <path d="M108 110c4-4 11-4 15 0"/>
+        <path d="M100 118v18c0 3-3 5-5 6"/>
+        <path d="M88 152c8-5 16-5 24 0-8 9-16 9-24 0z"/>
+        <path d="M84 190v17c-23 6-37 25-41 61"/>
+        <path d="M116 190v17c23 6 37 25 41 61"/>
+      </g>
+    </symbol>
+    <symbol id="face-side" viewBox="0 0 200 280">
+      <g fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M60 60c-4 32-8 55 0 85 6 24 20 40 40 40s36-14 44-36c6-18 6-44 2-70-6-36-24-56-50-56-20 0-33 15-36 37z"/>
+        <path d="M60 100c8 4 18 4 26 0"/>
+        <path d="M96 118c6 4 14 4 20 0"/>
+        <path d="M100 118v22c0 4-4 6-8 7"/>
+        <path d="M94 158c8-4 16-4 24 0"/>
+        <path d="M84 190v22c-22 8-34 26-38 68"/>
+        <path d="M116 190v22c22 8 34 26 38 68"/>
+      </g>
+    </symbol>
+    <symbol id="branch" viewBox="0 0 120 260">
+      <g fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round">
+        <path d="M60 260c0-62-2-112-4-164"/>
+        <path d="M56 132c-19-8-29-27-27-46 17 5 27 21 27 44"/>
+        <path d="M58 172c19-8 29-27 27-46-17 5-27 21-27 44"/>
+        <path d="M56 98c-17-8-25-25-23-42 15 5 23 19 23 40"/>
+        <path d="M58 60c15-8 23-23 21-38-15 4-21 19-21 36"/>
+        <path d="M57 200c-16-6-24-22-23-38 14 5 23 18 23 36"/>
+      </g>
+    </symbol>
+    <symbol id="sparkle" viewBox="0 0 24 24">
+      <path d="M12 2c0 6 4 10 10 10-6 0-10 4-10 10 0-6-4-10-10-10 6 0 10-4 10-10z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="heart" viewBox="0 0 40 36">
+      <path d="M20 32C8 24 2 17 2 11 2 5 6 2 11 2c4 0 7 2 9 6 2-4 5-6 9-6 5 0 9 3 9 9 0 6-6 13-18 21z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="eye" viewBox="0 0 60 32">
+      <path d="M2 16c8-11 48-11 56 0-8 11-48 11-56 0z" fill="none" stroke="currentColor" stroke-width="1.1"/>
+      <circle cx="30" cy="16" r="6.5" fill="none" stroke="currentColor" stroke-width="1.1"/>
+    </symbol>
+    <symbol id="flower" viewBox="0 0 60 60">
+      <g fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+        <circle cx="30" cy="30" r="5"/>
+        <path d="M30 25c0-9 4-13 8-13s6 6 2 11"/>
+        <path d="M30 35c0 9-4 13-8 13s-6-6-2-11"/>
+        <path d="M25 30c-9 0-13-4-13-8s6-6 11-2"/>
+        <path d="M35 30c9 0 13 4 13 8s-6 6-11 2"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- BOOK -->
+<div class="stage">
+  <div class="book" id="book">
+
+    <!-- P1 · INTERACTIVE BOX -->
+    <section class="page is-active" data-page="1">
+      <div class="page-inner box-page">
+        <div class="gift-box" id="giftBox">
+          <div class="box-glow"></div>
+          <div class="box-body">
+            <div class="box-ribbon-v"></div>
+            <div class="box-ribbon-h"></div>
+          </div>
+          <div class="box-lid"></div>
+          <div class="box-bow">🎀</div>
+          <div class="box-hint">развяжи меня</div>
+        </div>
+        <button class="enter-btn" id="enterBtn">Открыть журнал</button>
+      </div>
+    </section>
+
+    <!-- P2 · COVER -->
+    <section class="page" data-page="2">
+      <div class="page-inner cover">
+        <div class="cover-top"><span>Nº 01</span><span>Private Edition</span></div>
+        <h1 class="masthead">MUSE<sup>°</sup></h1>
+        <div class="cover-rule"></div>
+        <div class="cover-issue">The <em>Даша</em> Issue</div>
+        <div class="cover-art">
+          <svg class="art-branch left" viewBox="0 0 120 260"><use href="#branch"/></svg>
+          <div class="cover-photo">
+            <svg viewBox="0 0 200 280"><use href="#face"/></svg>
+            <img src="photos/01-cover.jpg" alt="Обложка" loading="lazy" onerror="this.remove()">
+          </div>
+          <svg class="art-branch right" viewBox="0 0 120 260"><use href="#branch"/></svg>
+        </div>
+        <div class="cover-note">тираж — один экземпляр</div>
+        <div class="cover-hint">листай <span>→</span></div>
+      </div>
+    </section>
+
+    <!-- P3 · IMPRINT -->
+    <section class="page" data-page="3">
+      <div class="page-inner">
+        <div class="kicker">Выходные данные</div>
+        <div class="rule"></div>
+        <h2 class="head">Сделано <em>вручную</em></h2>
+        <div class="letter">
+          <p><b>Главный редактор</b> — Макс, Мася, Максимочка<br>
+          <b>Фотограф</b> — я же<br>
+          <b>Модель</b> — Даша<br>
+          <b>Корректор</b> — никто, и это заметно<br>
+          <b>Вдохновитель</b> — Даша<br>
+          <b>Год</b> — 2026<br>
+          <b>Тираж</b> — один экземпляр</p>
+          <p>Всё, что здесь написано, — правда. Проверено редакцией. Многократно.</p>
+          <p>Издаётся без разрешения. Посвящается одной персоне. Другим не показывать.</p>
+        </div>
+        <div class="folio"><span>Выходные данные</span><span>03</span></div>
+      </div>
+    </section>
+
+    <!-- P4 · EDITOR'S LETTER -->
+    <section class="page" data-page="4">
+      <div class="page-inner">
+        <div class="kicker">От редактора</div>
+        <div class="rule"></div>
+        <h2 class="head">Почему этот номер <em>существует</em></h2>
+        <div class="letter">
+          <p>У каждого выпуска есть причина выйти. У этого причина простая: одна девушка не верит в собственную красоту, и это нужно исправить.</p>
+          <p>Обычно журналы ищут моделей. Здесь моделей не искали — её просто однажды увидели. И с того дня ничего не пришлось придумывать: только записывать.</p>
+          <p>Этот выпуск — про конкретного человека. Не про «типаж» и не про «стандарт». Про неё: с утренним неубранным пучком, с той самой паузой перед смехом.</p>
+          <p>Дальше — не мнение. Наблюдения. Читай медленно.</p>
+        </div>
+        <div class="signature">
+          С уважением, редакция.
+          <small>By Макс, Мася, Максимочка · Private circulation only</small>
+        </div>
+        <div class="folio"><span>От редактора</span><span>04</span></div>
+      </div>
+    </section>
+
+    <!-- P5 · CONTENTS -->
+    <section class="page" data-page="5">
+      <div class="page-inner">
+        <div class="kicker">Содержание</div>
+        <div class="rule"></div>
+        <h2 class="head">В этом <em>номере</em></h2>
+        <ul class="toc">
+          <li data-jump="6"><span class="n">06</span><span class="t">Портрет: открытие</span><span class="d">она</span></li>
+          <li data-jump="7"><span class="n">07</span><span class="t">Этюды I</span><span class="d">глаза · улыбка</span></li>
+          <li data-jump="8"><span class="n">08</span><span class="t">Этюды II</span><span class="d">профиль</span></li>
+          <li data-jump="9"><span class="n">09</span><span class="t">Пять моментов</span><span class="d">описание</span></li>
+          <li data-jump="10"><span class="n">10</span><span class="t">Кадр 1</span><span class="d">взгляд</span></li>
+          <li data-jump="11"><span class="n">11</span><span class="t">Кадр 2</span><span class="d">улыбка</span></li>
+          <li data-jump="12"><span class="n">12</span><span class="t">Кадр 3</span><span class="d">профиль</span></li>
+          <li data-jump="13"><span class="n">13</span><span class="t">Кадр 4</span><span class="d">настоящая</span></li>
+          <li data-jump="14"><span class="n">14</span><span class="t">Цитата I</span><span class="d">курсив</span></li>
+          <li data-jump="15"><span class="n">15</span><span class="t">Тридцать причин</span><span class="d">открытие</span></li>
+          <li data-jump="26"><span class="n">26</span><span class="t">Финал причин</span><span class="d">вывод</span></li>
+          <li data-jump="28"><span class="n">28</span><span class="t">В деталях</span><span class="d">мелочи</span></li>
+          <li data-jump="29"><span class="n">29</span><span class="t">Азбука её</span><span class="d">А→Я</span></li>
+          <li data-jump="30"><span class="n">30</span><span class="t">Гороскоп</span><span class="d">правда</span></li>
+          <li data-jump="31"><span class="n">31</span><span class="t">Плейлист</span><span class="d">её</span></li>
+          <li data-jump="32"><span class="n">32</span><span class="t">Интервью с собой</span><span class="d">тихо</span></li>
+          <li data-jump="36"><span class="n">36</span><span class="t">Письмо · часть I</span><span class="d">от руки</span></li>
+          <li data-jump="37"><span class="n">37</span><span class="t">Письмо · часть II</span><span class="d">от руки</span></li>
+          <li data-jump="40"><span class="n">40</span><span class="t">Рецепт вечера</span><span class="d">наш</span></li>
+          <li data-jump="41"><span class="n">41</span><span class="t">Последнее слово</span><span class="d">нажми</span></li>
+          <li data-jump="47"><span class="n">47</span><span class="t">Музыка</span><span class="d">трек</span></li>
+          <li data-jump="48"><span class="n">48</span><span class="t">Кино</span><span class="d">признание</span></li>
+        </ul>
+        <div class="toc-doodle">
+          <svg viewBox="0 0 24 24"><use href="#sparkle"/></svg>
+          <svg viewBox="0 0 60 60"><use href="#flower"/></svg>
+          <svg viewBox="0 0 24 24"><use href="#sparkle"/></svg>
+        </div>
+        <div class="folio"><span>Содержание</span><span>05</span></div>
+      </div>
+    </section>
+
+    <!-- P6 · PORTRAIT OPENER -->
+    <section class="page" data-page="6">
+      <div class="page-inner">
+        <div class="kicker">The Portrait</div>
+        <div class="rule"></div>
+        <h2 class="head">Съёмка <em>без постановки</em></h2>
+        <p class="deck">Кадры из личного архива. Здесь она настоящая — и именно поэтому это лучший материал выпуска.</p>
+        <div class="shots">
+          <figure class="shot big">
+            <div class="shot-inner">
+              <svg viewBox="0 0 200 280"><use href="#face"/></svg>
+              <img src="photos/02-portrait.jpg" alt="Портрет" loading="lazy" onerror="this.remove()">
+            </div>
+            <figcaption><span>Fig. 01 — главный кадр</span><span>private</span></figcaption>
+          </figure>
+        </div>
+        <div class="folio"><span>Портрет</span><span>06</span></div>
+      </div>
+    </section>
+
+    <!-- P7 · STUDIES I -->
+    <section class="page" data-page="7">
+      <div class="page-inner">
+        <div class="kicker">Этюды · I</div>
+        <div class="rule"></div>
+        <h2 class="head">Глаза <em>и</em> улыбка</h2>
+        <p class="deck">То, что нельзя нарисовать прилагательными. Приходится кадром.</p>
+        <div class="shots">
+          <figure class="shot">
+            <div class="shot-inner">
+              <svg viewBox="0 0 60 32"><use href="#eye"/></svg>
+              <img src="photos/03-eyes.jpg" alt="Глаза" loading="lazy" onerror="this.remove()">
+            </div>
+            <figcaption><span>Fig. 02 — взгляд</span><span>внимание</span></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="shot-inner">
+              <svg viewBox="0 0 60 60"><use href="#flower"/></svg>
+              <img src="photos/04-smile.jpg" alt="Улыбка" loading="lazy" onerror="this.remove()">
+            </div>
+            <figcaption><span>Fig. 03 — улыбка</span><span>до</span></figcaption>
+          </figure>
+        </div>
+        <p class="deck hand" style="text-align:center; margin-top:14px; font-size:14px;">когда она слушает — весь номер держится на этом</p>
+        <div class="folio"><span>Этюды I</span><span>07</span></div>
+      </div>
+    </section>
+
+    <!-- P8 · STUDIES II -->
+    <section class="page" data-page="8">
+      <div class="page-inner">
+        <div class="kicker">Этюды · II</div>
+        <div class="rule"></div>
+        <h2 class="head">Профиль, <em>вне</em> кадра</h2>
+        <p class="deck">То, что она делает, когда думает, что никто не смотрит.</p>
+        <div class="shots">
+          <figure class="shot big">
+            <div class="shot-inner">
+              <svg viewBox="0 0 200 280"><use href="#face-side"/></svg>
+              <img src="photos/06-profile.jpg" alt="Профиль" loading="lazy" onerror="this.remove()">
+            </div>
+            <figcaption><span>Fig. 04 — профиль</span><span>вне кадра</span></figcaption>
+          </figure>
+        </div>
+        <p class="deck hand" style="text-align:center; margin-top:14px; font-size:14px;">лучшие кадры получаются, когда она забыла, что камера здесь</p>
+        <div class="folio"><span>Этюды II</span><span>08</span></div>
+      </div>
+    </section>
+
+    <!-- P9 · FIVE MOMENTS (TEXT ONLY) -->
+    <section class="page" data-page="9">
+      <div class="page-inner">
+        <div class="kicker">Пять моментов</div>
+        <div class="rule"></div>
+        <h2 class="head">Кадры, которые <em>важнее</em> слов</h2>
+        <p class="deck">Каждый из них — не про внешность. Это про то, что я вижу, когда смотрю на тебя.</p>
+        <ul class="reasons big">
+          <li><span class="num">01</span><div><h3>Взгляд</h3><p>Когда ты слушаешь по-настоящему. В этот момент весь мир замирает.</p></div></li>
+          <li><span class="num">02</span><div><h3>Улыбка</h3><p>Та, после которой на секунду выключаются мысли.</p></div></li>
+          <li><span class="num">03</span><div><h3>Смех</h3><p>Твой смех — лучшее, что можно услышать утром. И вечером. И вообще всегда.</p></div></li>
+          <li><span class="num">04</span><div><h3>Профиль</h3><p>То, что видит только камера. И я.</p></div></li>
+          <li><span class="num">05</span><div><h3>Настоящая</h3><p>Без фильтров и без маски. Именно такая нужна.</p></div></li>
+        </ul>
+        <div class="folio"><span>Пять моментов</span><span>09</span></div>
+      </div>
+    </section>
+
+    <!-- P10 · FRAME 1 -->
+    <section class="page" data-page="10">
+      <div class="page-inner">
+        <div class="kicker">Кадры · I</div>
+        <div class="rule"></div>
+        <h2 class="head">Взгляд</h2>
+        <div class="shots">
+          <figure class="shot big">
+            <div class="shot-inner">
+              <img src="photos/07-contact-1.jpg" alt="Кадр 1" loading="lazy" onerror="this.remove()">
+            </div>
+          </figure>
+        </div>
+        <p class="deck" style="margin-top:14px;">Когда ты слушаешь по-настоящему. В этот момент весь мир замирает.</p>
+        <div class="folio"><span>Кадры I</span><span>10</span></div>
+      </div>
+    </section>
+
+    <!-- P11 · FRAME 2 -->
+    <section class="page" data-page="11">
+      <div class="page-inner">
+        <div class="kicker">Кадры · II</div>
+        <div class="rule"></div>
+        <h2 class="head">Улыбка</h2>
+        <div class="shots">
+          <figure class="shot big">
+            <div class="shot-inner">
+              <img src="photos/07-contact-2.jpg" alt="Кадр 2" loading="lazy" onerror="this.remove()">
+            </div>
+          </figure>
+        </div>
+        <p class="deck" style="margin-top:14px;">Та, после которой на секунду выключаются мысли.</p>
+        <div class="folio"><span>Кадры II</span><span>11</span></div>
+      </div>
+    </section>
+
+    <!-- P12 · FRAME 3 -->
+    <section class="page" data-page="12">
+      <div class="page-inner">
+        <div class="kicker">Кадры · III</div>
+        <div class="rule"></div>
+        <h2 class="head">Профиль</h2>
+        <div class="shots">
+          <figure class="shot big">
+            <div class="shot-inner">
+              <img src="photos/07-contact-4.jpg" alt="Кадр 4" loading="lazy" onerror="this.remove()">
+            </div>
+          </figure>
+        </div>
+        <p class="deck" style="margin-top:14px;">То, что видит только камера. И я.</p>
+        <div class="folio"><span>Кадры III</span><span>12</span></div>
+      </div>
+    </section>
+
+    <!-- P13 · FRAME 4 -->
+    <section class="page" data-page="13">
+      <div class="page-inner">
+        <div class="kicker">Кадры · IV</div>
+        <div class="rule"></div>
+        <h2 class="head">Настоящая</h2>
+        <div class="shots">
+          <figure class="shot big">
+            <div class="shot-inner">
+              <img src="photos/07-contact-5.jpg" alt="Кадр 5" loading="lazy" onerror="this.remove()">
+            </div>
+          </figure>
+        </div>
+        <p class="deck" style="margin-top:14px;">Без фильтров и без маски. Именно такая нужна.</p>
+        <div class="folio"><span>Кадры IV</span><span>13</span></div>
+      </div>
+    </section>
+
+    <!-- P14 · QUOTE I -->
+    <section class="page" data-page="14">
+      <div class="page-inner quote-page">
+        <div class="quote-mark">“</div>
+        <blockquote>Лучшие портреты — это не про то, как она выглядит. Это про то, как смотреть.</blockquote>
+        <cite>Из редакторской колонки</cite>
+        <div class="quote-orn">
+          <svg viewBox="0 0 24 24"><use href="#sparkle"/></svg>
+          <svg viewBox="0 0 40 36"><use href="#heart"/></svg>
+          <svg viewBox="0 0 24 24"><use href="#sparkle"/></svg>
+        </div>
+        <div class="folio"><span>Слово после съёмки</span><span>14</span></div>
+      </div>
+    </section>
+
+    <!-- P15 · REASONS OPENER -->
+    <section class="page" data-page="15">
+      <div class="page-inner" style="justify-content:center; text-align:center;">
+        <div class="kicker">The Feature</div>
+        <div class="rule" style="width:60px; margin:14px auto 24px;"></div>
+        <h2 class="head" style="font-size:34px; line-height:1;">Тридцать <em>причин</em>.</h2>
+        <p class="deck" style="max-width:260px; margin:14px auto 0;">Не рейтинг. Не список. Просто вещи, которые видно, если смотреть внимательно. По три на страницу — чтобы не спешила.</p>
+        <div class="quote-orn" style="justify-content:center; margin-top:24px;">
+          <svg viewBox="0 0 60 60"><use href="#flower"/></svg>
+        </div>
+        <div class="folio"><span>Причины</span><span>15</span></div>
+      </div>
+    </section>
+
+    <!-- P16 · 1-3 -->
+    <section class="page" data-page="16">
+      <div class="page-inner">
+        <div class="kicker">Причины · I</div>
+        <div class="rule"></div>
+        <h2 class="head">Три из <em>тридцати</em></h2>
+        <ul class="reasons big">
+          <li><span class="num">01</span><div><h3>Улыбка</h3><p>Не «красивая». Та, после которой на секунду выключаются мысли.</p></div></li>
+          <li><span class="num">02</span><div><h3>Смех</h3><p>Смеётся над своей же шуткой раньше, чем её закончит. Это лучшая часть.</p></div></li>
+          <li><span class="num">03</span><div><h3>Сила</h3><p>Достаточно сильная, чтобы всё вынести. Достаточно живая, чтобы хотеть тихий вечер.</p></div></li>
+        </ul>
+        <div class="folio"><span>Причины 01–03</span><span>16</span></div>
+      </div>
+    </section>
+
+    <!-- P17 · 4-6 -->
+    <section class="page" data-page="17">
+      <div class="page-inner">
+        <div class="kicker">Причины · II</div>
+        <div class="rule"></div>
+        <h2 class="head">Ещё <em>три</em></h2>
+        <ul class="reasons big">
+          <li><span class="num">04</span><div><h3>Взгляд</h3><p>Когда слушает по-настоящему. В этот момент весь номер держится на нём.</p></div></li>
+          <li><span class="num">05</span><div><h3>Утро</h3><p>Несобранное, без фильтров. Вот это и есть обложка.</p></div></li>
+          <li><span class="num">06</span><div><h3>Ум</h3><p>Паузы не нужно заполнять. С ней хорошо и говорить, и молчать.</p></div></li>
+        </ul>
+        <div class="folio"><span>Причины 04–06</span><span>17</span></div>
+      </div>
+    </section>
+
+    <!-- P18 · 7-9 -->
+    <section class="page" data-page="18">
+      <div class="page-inner">
+        <div class="kicker">Причины · III</div>
+        <div class="rule"></div>
+        <h2 class="head">И <em>ещё</em></h2>
+        <ul class="reasons big">
+          <li><span class="num">07</span><div><h3>Доброта</h3><p>Делает хорошее тихо, без свидетелей. Это редкая роскошь.</p></div></li>
+          <li><span class="num">08</span><div><h3>Сомнение</h3><p>Имеет право не верить. Мы всё равно продолжим это печатать.</p></div></li>
+          <li><span class="num">09</span><div><h3>Терпение</h3><p>Умеешь ждать, не давя. Это редкость и большое искусство.</p></div></li>
+        </ul>
+        <div class="folio"><span>Причины 07–09</span><span>18</span></div>
+      </div>
+    </section>
+
+    <!-- P19 · 10-12 -->
+    <section class="page" data-page="19">
+      <div class="page-inner">
+        <div class="kicker">Причины · IV</div>
+        <div class="rule"></div>
+        <h2 class="head">Следующая <em>тройка</em></h2>
+        <ul class="reasons big">
+          <li><span class="num">10</span><div><h3>Голос</h3><p>Особенно когда ты говоришь тихо. Мне приходится наклоняться ближе.</p></div></li>
+          <li><span class="num">11</span><div><h3>Тепло</h3><p>Входишь — и в комнате становится теплее. Без отопления.</p></div></li>
+          <li><span class="num">12</span><div><h3>Честность</h3><p>Говоришь как есть. Даже когда это неудобно. Особенно тогда.</p></div></li>
+        </ul>
+        <div class="folio"><span>Причины 10–12</span><span>19</span></div>
+      </div>
+    </section>
+
+    <!-- P20 · 13-15 -->
+    <section class="page" data-page="20">
+      <div class="page-inner">
+        <div class="kicker">Причины · V</div>
+        <div class="rule"></div>
+        <h2 class="head">Три <em>в</em> строку</h2>
+        <ul class="reasons big">
+          <li><span class="num">13</span><div><h3>Упрямство</h3><p>В хорошем смысле. Не сдаёшься, когда надо не сдаваться.</p></div></li>
+          <li><span class="num">14</span><div><h3>Нежность</h3><p>Не ко всем. Но кому надо — тому по-настоящему.</p></div></li>
+          <li><span class="num">15</span><div><h3>Молчание</h3><p>Иногда лучше всех слов. Особенно когда мы вместе молчим.</p></div></li>
+        </ul>
+        <div class="folio"><span>Причины 13–15</span><span>20</span></div>
+      </div>
+    </section>
+
+    <!-- P21 · 16-18 -->
+    <section class="page" data-page="21">
+      <div class="page-inner">
+        <div class="kicker">Причины · VI</div>
+        <div class="rule"></div>
+        <h2 class="head">Середина <em>списка</em></h2>
+        <ul class="reasons big">
+          <li><span class="num">16</span><div><h3>Способность</h3><p>Удивлять. Даже когда кажется, что уже всё про тебя знаю.</p></div></li>
+          <li><span class="num">17</span><div><h3>Музыка</h3><p>Ты — это плейлист. У него нет плохих треков.</p></div></li>
+          <li><span class="num">18</span><div><h3>Кофе</h3><p>Ты пьёшь его как ритуал. И я выучил, какой тебе нравится.</p></div></li>
+        </ul>
+        <div class="folio"><span>Причины 16–18</span><span>21</span></div>
+      </div>
+    </section>
+
+    <!-- P22 · 19-21 -->
+    <section class="page" data-page="22">
+      <div class="page-inner">
+        <div class="kicker">Причины · VII</div>
+        <div class="rule"></div>
+        <h2 class="head">Ещё <em>ближе</em></h2>
+        <ul class="reasons big">
+          <li><span class="num">19</span><div><h3>Сон</h3><p>Ты во сне морщишь нос. Я это заметил. Я не спал.</p></div></li>
+          <li><span class="num">20</span><div><h3>Смелость</h3><p>Пробовать новое, когда страшно. Это самый красивый вид смелости.</p></div></li>
+          <li><span class="num">21</span><div><h3>Вкус</h3><p>В еде, в людях, в вещах. Не ошибаешься. Почти никогда.</p></div></li>
+        </ul>
+        <div class="folio"><span>Причины 19–21</span><span>22</span></div>
+      </div>
+    </section>
+
+    <!-- P23 · 22-24 -->
+    <section class="page" data-page="23">
+      <div class="page-inner">
+        <div class="kicker">Причины · VIII</div>
+        <div class="rule"></div>
+        <h2 class="head">Почти <em>конец</em></h2>
+        <ul class="reasons big">
+          <li><span class="num">22</span><div><h3>Умение</h3><p>Слушать. По-настоящему. Так редко умеют.</p></div></li>
+          <li><span class="num">23</span><div><h3>Память</h3><p>Помнишь мелочи, которые я сам забыл. И это трогает больше, чем надо.</p></div></li>
+          <li><span class="num">24</span><div><h3>Свет</h3><p>Когда заходишь — сразу становится светлее. Не спрашивай как.</p></div></li>
+        </ul>
+        <div class="folio"><span>Причины 22–24</span><span>23</span></div>
+      </div>
+    </section>
+
+    <!-- P24 · 25-27 -->
+    <section class="page" data-page="24">
+      <div class="page-inner">
+        <div class="kicker">Причины · IX</div>
+        <div class="rule"></div>
+        <h2 class="head">И <em>так</em> далее</h2>
+        <ul class="reasons big">
+          <li><span class="num">25</span><div><h3>Дом</h3><p>Ты и есть это слово. Без стен и адреса.</p></div></li>
+          <li><span class="num">26</span><div><h3>Будущее</h3><p>Всё, что я в нём вижу, — с тобой. И это не пафос. Это просто факт.</p></div></li>
+          <li><span class="num">27</span><div><h3>Утро вдвоём</h3><p>Всё, что мне нужно от жизни, — это утро, в котором ты есть.</p></div></li>
+        </ul>
+        <div class="folio"><span>Причины 25–27</span><span>24</span></div>
+      </div>
+    </section>
+
+    <!-- P25 · 28-30 -->
+    <section class="page" data-page="25">
+      <div class="page-inner">
+        <div class="kicker">Причины · X</div>
+        <div class="rule"></div>
+        <h2 class="head">Последние <em>три</em></h2>
+        <ul class="reasons big">
+          <li><span class="num">28</span><div><h3>Как смотришь</h3><p>Когда думаешь, что я не замечаю. Я замечаю. Всегда.</p></div></li>
+          <li><span class="num">29</span><div><h3>Просто ты</h3><p>Не «красивая», не «шикарная», не «идеальная». Просто ты. И этого более чем достаточно.</p></div></li>
+          <li><span class="num">30</span><div><h3>Всё вместе</h3><p>Это не сумма. Это что-то гораздо большее.</p></div></li>
+        </ul>
+        <div class="folio"><span>Причины 28–30</span><span>25</span></div>
+      </div>
+    </section>
+
+    <!-- P26 · REASONS CLOSING -->
+    <section class="page" data-page="26">
+      <div class="page-inner" style="justify-content:center; text-align:center;">
+        <div class="kicker">Причины · финал</div>
+        <div class="rule" style="width:60px; margin:14px auto 24px;"></div>
+        <h2 class="head" style="font-size:28px; line-height:1.1;">И это только <em>тридцать</em>.</h2>
+        <p class="deck" style="max-width:260px; margin:14px auto 0;">На самом деле их больше. Просто редакция устала считать. Продолжение — в следующем выпуске. Или в жизни.</p>
+        <div class="signature" style="margin-top:22px; font-size:17px; transform:rotate(-2deg);">
+          подписка бессрочная
+          <small style="display:block; margin-top:4px;">— от редакции</small>
+        </div>
+        <div class="folio"><span>Причины · финал</span><span>26</span></div>
+      </div>
+    </section>
+
+    <!-- P27 · PULL QUOTE I -->
+    <section class="page" data-page="27">
+      <div class="page-inner quote-page">
+        <div class="quote-mark">“</div>
+        <blockquote>Некоторые люди заходят в комнату и меняют в ней воздух. Ты — из таких.</blockquote>
+        <cite>Из редакторской колонки</cite>
+        <div class="quote-orn">
+          <svg viewBox="0 0 24 24"><use href="#sparkle"/></svg>
+          <svg viewBox="0 0 40 36"><use href="#heart"/></svg>
+          <svg viewBox="0 0 24 24"><use href="#sparkle"/></svg>
+        </div>
+        <div class="folio"><span>Цитата I</span><span>27</span></div>
+      </div>
+    </section>
+
+    <!-- P28 · В ДЕТАЛЯХ -->
+    <section class="page" data-page="28">
+      <div class="page-inner">
+        <div class="kicker">В деталях</div>
+        <div class="rule"></div>
+        <h2 class="head">Маленькие <em>вещи</em></h2>
+        <p class="deck">То, что не попадает в общие слова, но попадает в сердце.</p>
+        <ul class="notes">
+          <li>Как ты закусываешь губу, когда думаешь.</li>
+          <li>Запах твоих волос утром — до кофе, до всего.</li>
+          <li>Твой палец, который ищет мой, когда мы идём.</li>
+          <li>Как ты смеёшься, а потом сразу смущаешься.</li>
+          <li>Песня, которую ты включаешь первой.</li>
+          <li>Твоя привычка поправлять плед, чтобы он лежал «правильно».</li>
+          <li>Как ты говоришь «ну ладно», когда на самом деле не ладно.</li>
+          <li>Твой почерк. Он похож на тебя — живой и чуть неаккуратный.</li>
+        </ul>
+        <div class="folio"><span>В деталях</span><span>28</span></div>
+      </div>
+    </section>
+
+    <!-- P29 · АЗБУКА -->
+    <section class="page" data-page="29">
+      <div class="page-inner">
+        <div class="kicker">Азбука её</div>
+        <div class="rule"></div>
+        <h2 class="head">От <em>А</em> до <em>Я</em></h2>
+        <p class="deck">Короткий словарь. Продолжение — бесконечное.</p>
+        <ul class="reasons">
+          <li><span class="num">А</span><div><h3>Абсолютная</h3><p>Не «почти». Не «в целом». Абсолютно.</p></div></li>
+          <li><span class="num">В</span><div><h3>Весёлая</h3><p>Смех — это первое, что я слышу, когда думаю о тебе.</p></div></li>
+          <li><span class="num">Д</span><div><h3>Добрая</h3><p>Тихо, без свидетелей. Так доброта и должна работать.</p></div></li>
+          <li><span class="num">Ж</span><div><h3>Живая</h3><p>Не картинка. Настоящая. Со всем, что к этому прилагается.</p></div></li>
+          <li><span class="num">К</span><div><h3>Красивая</h3><p>Не потому что я так сказал. А потому что это факт.</p></div></li>
+          <li><span class="num">Л</span><div><h3>Любимая</h3><p>Моя. И это не обсуждается.</p></div></li>
+          <li><span class="num">М</span><div><h3>Моя</h3><p>В смысле — не собственность. В смысле — я твой.</p></div></li>
+          <li><span class="num">Н</span><div><h3>Настоящая</h3><p>Без фильтров и без маски. Именно такая нужна.</p></div></li>
+          <li><span class="num">О</span><div><h3>Особенная</h3><p>Не «одна из». Просто особенная.</p></div></li>
+          <li><span class="num">Р</span><div><h3>Редкая</h3><p>Таких, как ты, — один экземпляр на весь тираж.</p></div></li>
+          <li><span class="num">Т</span><div><h3>Тёплая</h3><p>Как чай в холодный вечер. И как плед.</p></div></li>
+          <li><span class="num">Ш</span><div><h3>Шикарная</h3><p>Слово, которое ты всё ещё не хочешь принимать. Придётся.</p></div></li>
+          <li><span class="num">Я</span><div><h3>Ясная</h3><p>С тобой всё наконец на своих местах.</p></div></li>
+        </ul>
+        <div class="folio"><span>Азбука её</span><span>29</span></div>
+      </div>
+    </section>
+
+    <!-- P30 · ГОРОСКОП -->
+    <section class="page" data-page="30">
+      <div class="page-inner">
+        <div class="kicker">Гороскоп</div>
+        <div class="rule"></div>
+        <h2 class="head">Прогноз на <em>всегда</em></h2>
+        <div class="letter">
+          <p><b style="font-family:var(--serif);">Сегодня.</b><br>Ты — шикарная. Это не обсуждается и не зависит от погоды.</p>
+          <p><b style="font-family:var(--serif);">Завтра.</b><br>Ты — шикарная. Потому что это не меняется от дня недели.</p>
+          <p><b style="font-family:var(--serif);">На неделе.</b><br>Всё то же самое. Возможны осадки в виде комплиментов. Ожидаются.</p>
+          <p><b style="font-family:var(--serif);">В этом году.</b><br>Ты — шикарная. Прогноз устойчивый, многолетний, не подлежит пересмотру.</p>
+          <p><b style="font-family:var(--serif);">В следующем.</b><br>То же самое. Мы проверяли.</p>
+        </div>
+        <div class="signature" style="font-size:16px; margin-top:12px;">
+          составлено редакцией — не по звёздам, а по фактам
+        </div>
+        <div class="folio"><span>Гороскоп</span><span>30</span></div>
+      </div>
+    </section>
+
+    <!-- P31 · ПЛЕЙЛИСТ -->
+    <section class="page" data-page="31">
+      <div class="page-inner">
+        <div class="kicker">Плейлист</div>
+        <div class="rule"></div>
+        <h2 class="head">Песни, под которые <em>ты</em> — это ты</h2>
+        <p class="deck">Не рекомендуем. Просто подслушали.</p>
+        <ul class="tracklist">
+          <li><span class="n">01</span><span class="t">Утренний кофе</span><span class="d">медленно</span></li>
+          <li><span class="n">02</span><span class="t">По дороге куда угодно</span><span class="d">к тебе</span></li>
+          <li><span class="n">03</span><span class="t">Тот смех в 3:00</span><span class="d">громко</span></li>
+          <li><span class="n">04</span><span class="t">Тихий вечер, плед</span><span class="d">с чаем</span></li>
+          <li><span class="n">05</span><span class="t">Танцуешь, когда никого нет</span><span class="d">смешно</span></li>
+          <li><span class="n">06</span><span class="t">Та песня, что ты включишь, если рядом я</span><span class="d">одна</span></li>
+          <li><span class="n">07</span><span class="t">Финальная, без слов</span><span class="d">и это лучшее</span></li>
+        </ul>
+        <div class="folio"><span>Плейлист</span><span>31</span></div>
+      </div>
+    </section>
+
+    <!-- P32 · ИНТЕРВЬЮ -->
+    <section class="page" data-page="32">
+      <div class="page-inner">
+        <div class="kicker">Интервью</div>
+        <div class="rule"></div>
+        <h2 class="head">С <em>самим</em> собой</h2>
+        <p class="deck">Вопросы, которые я задаю себе о тебе. Ответы — я их знаю.</p>
+        <div class="letter">
+          <p><b>— Что я думаю, когда ты входишь в комнату?</b><br>— «Как мне так повезло.»</p>
+          <p><b>— Что я думаю, когда ты молчишь?</b><br>— «Я мог бы слушать это молчание вечно.»</p>
+          <p><b>— Что я думаю, когда ты смеёшься?</b><br>— «Вот. Вот она. Настоящая.»</p>
+          <p><b>— Что я думаю, когда ты не веришь мне?</b><br>— «Ничего. Я подожду. Я умею ждать.»</p>
+          <p><b>— Что я думаю, когда ты уходишь?</b><br>— «Уже хочу, чтобы ты вернулась. Так быстро?»</p>
+          <p><b>— Что я думаю сейчас?</b><br>— «Она сейчас читает это. И, может быть, улыбнулась. Вот это — лучшее.»</p>
+        </div>
+        <div class="folio"><span>Интервью</span><span>32</span></div>
+      </div>
+    </section>
+
+    <!-- P33 · РЕКЛАМА I -->
+    <section class="page" data-page="33">
+      <div class="page-inner">
+        <div class="kicker">Рекламная полоса</div>
+        <div class="rule"></div>
+        <div class="ad-box">
+          <div class="ad-brand">MUSE · SUBSCRIPTION</div>
+          <div class="ad-tag">персональный выпуск</div>
+          <p>Выпускается с 2026 года. Один экземпляр. Второго не будет.</p>
+          <p>Каждый номер — новый повод сказать: ты шикарная.</p>
+          <p>Доставка — в руки. В объятия. В сердце.</p>
+          <div class="ad-cta">Бесплатно · Бессрочно · Пожизненно</div>
+        </div>
+        <p class="deck hand" style="text-align:center; margin-top:14px; font-size:14px;">отменить подписку невозможно. и не хочется.</p>
+        <div class="folio"><span>Реклама · подписка</span><span>33</span></div>
+      </div>
+    </section>
+
+    <!-- P34 · РЕКЛАМА II -->
+    <section class="page" data-page="34">
+      <div class="page-inner">
+        <div class="kicker">Рекламная полоса</div>
+        <div class="rule"></div>
+        <div class="ad-box">
+          <div class="ad-brand">MUSE · PARFUM</div>
+          <div class="ad-tag">аромат № 1</div>
+          <p><b style="font-family:var(--sans); font-size:8.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink);">Верхние ноты</b><br>утренний кофе, твой голос, тишина</p>
+          <p><b style="font-family:var(--sans); font-size:8.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink);">Средние ноты</b><br>моё сердцебиение, когда ты рядом</p>
+          <p><b style="font-family:var(--sans); font-size:8.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink);">Базовые ноты</b><br>всё, что остаётся, когда ты уходишь</p>
+          <div class="ad-cta">Не продаётся · Выдаётся одному человеку · Навсегда</div>
+        </div>
+        <div class="folio"><span>Реклама · парфюм</span><span>34</span></div>
+      </div>
+    </section>
+
+    <!-- P35 · PULL QUOTE II -->
+    <section class="page" data-page="35">
+      <div class="page-inner quote-page">
+        <div class="quote-mark">“</div>
+        <blockquote>Не нужно быть идеальной. Нужно быть настоящей. С этим у тебя всё в порядке.</blockquote>
+        <cite>Из редакторской колонки</cite>
+        <div class="quote-orn">
+          <svg viewBox="0 0 24 24"><use href="#sparkle"/></svg>
+          <svg viewBox="0 0 40 36"><use href="#heart"/></svg>
+          <svg viewBox="0 0 24 24"><use href="#sparkle"/></svg>
+        </div>
+        <div class="folio"><span>Цитата II</span><span>35</span></div>
+      </div>
+    </section>
+
+    <!-- P36 · ПИСЬМО I -->
+    <section class="page" data-page="36">
+      <div class="page-inner">
+        <div class="kicker">Письмо · часть I</div>
+        <div class="rule"></div>
+        <h2 class="head">От руки, <em>без правок</em></h2>
+        <div class="letter-paper">
+          <p>Я не умею говорить это красиво вслух, поэтому написал.</p>
+          <p>Ты — человек, рядом с которым мне хочется быть лучше. Не из-за давления, а потому что ты сама светишься, когда тебе хорошо. И я хочу, чтобы тебе было хорошо чаще.</p>
+          <p>Если ты сейчас читаешь это и думаешь «ну он преувеличивает» — значит, я всё сделал правильно.</p>
+          <p>Потому что я не преувеличиваю. Я просто вижу тебя.</p>
+        </div>
+        <div class="folio"><span>Письмо · I</span><span>36</span></div>
+      </div>
+    </section>
+
+    <!-- P37 · ПИСЬМО II -->
+    <section class="page" data-page="37">
+      <div class="page-inner">
+        <div class="kicker">Письмо · часть II</div>
+        <div class="rule"></div>
+        <h2 class="head">Продолжение <em>письма</em></h2>
+        <div class="letter-paper">
+          <p>И мне очень повезло.</p>
+          <p>Ты красивая. Не потому что я так сказал. А потому что это — факт. Такой же, как то, что после ночи наступает утро.</p>
+          <p>Ты шикарная. Не потому что ты стараешься. А потому что ты — это ты.</p>
+          <p>Ты моя. Не потому что я тебя выбрал. А потому что каждый день, просыпаясь, я снова выбираю тебя.</p>
+          <p>Всё. Больше нечего сказать. Дальше — только жизнь.</p>
+        </div>
+        <div class="folio"><span>Письмо · II</span><span>37</span></div>
+      </div>
+    </section>
+
+    <!-- P38 · ЗАМЕТКИ -->
+    <section class="page" data-page="38">
+      <div class="page-inner">
+        <div class="kicker">Заметки на полях</div>
+        <div class="rule"></div>
+        <h2 class="head">Мелкие <em>мысли</em></h2>
+        <p class="deck">То, что не вошло в основной текст, но важно.</p>
+        <ul class="notes">
+          <li>Слишком длинная пауза — плохо. Слишком короткая — тоже. Твоя — идеальная.</li>
+          <li>Я запомнил запах твоих волос раньше, чем твоё имя. Ну, почти.</li>
+          <li>Если ты сейчас читаешь и улыбаешься — я это вижу. Правда.</li>
+          <li>Я не поэт. Я просто вижу. Разница есть, но не для тебя.</li>
+          <li>Не все слова должны быть громкими. Некоторые — как ты: тихие, но лучше всех.</li>
+          <li>Если однажды покажется, что я забыл, — перечитай страницу 5. Или страницу 32.</li>
+        </ul>
+        <div class="folio"><span>Заметки</span><span>38</span></div>
+      </div>
+    </section>
+
+    <!-- P39 · ПИСЬМА ЧИТАТЕЛЕЙ -->
+    <section class="page" data-page="39">
+      <div class="page-inner">
+        <div class="kicker">Письма читателей</div>
+        <div class="rule"></div>
+        <h2 class="head">Редакция <em>отвечает</em></h2>
+        <ul class="rletters">
+          <li>
+            <p class="from">«Я не верю, что она такая красивая.» — читатель</p>
+            <p class="reply">Вы просто не видели. — Ред.</p>
+          </li>
+          <li>
+            <p class="from">«А можно у меня будет копия?» — читательница</p>
+            <p class="reply">Нет. Выпуск один. Он её. — Ред.</p>
+          </li>
+          <li>
+            <p class="from">«Я её знаю. Она правда такая.» — друг</p>
+            <p class="reply">Спасибо. Значит, я не сумасшедший. — Ред.</p>
+          </li>
+          <li>
+            <p class="from">«А почему так мало страниц?» — постоянный читатель</p>
+            <p class="reply">Их столько, сколько нужно. — Ред.</p>
+          </li>
+          <li>
+            <p class="from">«Она это читает?» — аноним</p>
+            <p class="reply">Сейчас — да. Привет. — Ред.</p>
+          </li>
+        </ul>
+        <div class="folio"><span>Письма читателей</span><span>39</span></div>
+      </div>
+    </section>
+
+    <!-- P40 · РЕЦЕПТ -->
+    <section class="page" data-page="40">
+      <div class="page-inner">
+        <div class="kicker">Кулинарная рубрика</div>
+        <div class="rule"></div>
+        <h2 class="head">Рецепт <em>тихого вечера</em></h2>
+        <p class="deck">Блюдо на двоих. Готовится без спешки.</p>
+        <div class="recipe-block">
+          <div class="recipe-label">Ингредиенты</div>
+          <p class="recipe-body">— один ты, без макияжа<br>
+          — один я, без телефона<br>
+          — два пледа<br>
+          — один фильм, который мы оба видели<br>
+          — чай, по вкусу<br>
+          — молчание, необязательно</p>
+        </div>
+        <div class="recipe-block">
+          <div class="recipe-label">Способ приготовления</div>
+          <p class="recipe-body">1. Усадить тебя на диван.<br>
+          2. Укрыть.<br>
+          3. Принести чай.<br>
+          4. Обнять.<br>
+          5. Не отпускать.</p>
+        </div>
+        <div class="recipe-block">
+          <div class="recipe-label">Подача</div>
+          <p class="recipe-body">Время приготовления — до утра.<br>
+          Порций — две.<br>
+          Повторяемость — сколько потребуется.</p>
+        </div>
+        <div class="folio"><span>Рецепт вечера</span><span>40</span></div>
+      </div>
+    </section>
+
+    <!-- P41 · FINAL WORD & LOVE COUNTER -->
+    <section class="page" data-page="41">
+      <div class="page-inner final-page">
+        <div class="kicker">The Final Word</div>
+        <div class="rule" style="width:60px;margin:12px auto 20px;"></div>
+        <h2>Сколько раз я тебя <em>люблю</em>?</h2>
+        <p class="deck">Давай посчитаем. Нажимай на кнопку.</p>
+        
+        <div class="love-counter">
+          <div class="love-count-display" id="loveCount">1</div>
+          <button class="love-btn" id="loveBtn">+1</button>
+        </div>
+        
+        <p class="deck hand" style="margin-top: auto; opacity: 0.7;">(это бесконечно)</p>
+        <div class="folio"><span>Последнее слово</span><span>41</span></div>
+      </div>
+    </section>
+
+    <!-- P42 · CONFESSION -->
+    <section class="page" data-page="42">
+      <div class="page-inner" style="justify-content:center; text-align:center;">
+        <div class="kicker">Признание</div>
+        <div class="rule" style="width:60px; margin:14px auto 24px;"></div>
+        <div class="signature" style="font-size:22px; line-height:1.3; margin:0 auto; max-width:280px;">
+          Этот номер придумал не журнал.<br>
+          Это я просто записал то, что вижу каждый день.
+        </div>
+        <p class="deck" style="margin:24px auto 0; max-width:260px;">Если понадобится — редакция будет выпускать его снова и снова, пока ты не поверишь. Подписка бессрочная.</p>
+        <div class="quote-orn" style="justify-content:center; margin-top:24px; opacity:.7;">
+          <svg viewBox="0 0 24 24"><use href="#sparkle"/></svg>
+          <svg viewBox="0 0 40 36"><use href="#heart"/></svg>
+          <svg viewBox="0 0 24 24"><use href="#sparkle"/></svg>
+        </div>
+        <div class="folio"><span>Признание</span><span>42</span></div>
+      </div>
+    </section>
+
+    <!-- P43 · DEDICATION (DRAWING CANVAS) -->
+    <section class="page" data-page="43">
+      <div class="page-inner dedication-page">
+        <div class="kicker">Для тебя</div>
+        <div class="rule" style="width:60px; margin:12px auto 18px;"></div>
+        <h2>Здесь можно <em>рисовать</em></h2>
+        <p>Оставь след. Что угодно.</p>
+        
+        <div class="dedication-photo">
+          <canvas id="drawingCanvas"></canvas>
+          <button class="clear-btn" id="clearCanvasBtn">Стереть</button>
+        </div>
+        
+        <p>Я сохраню этот номер навсегда.</p>
+        <div class="folio"><span>Творчество</span><span>43</span></div>
+      </div>
+    </section>
+
+    <!-- P44 · HUG PAGE -->
+    <section class="page" data-page="44">
+      <div class="page-inner hug-page">
+        <div class="kicker">Забота</div>
+        <div class="rule" style="width:60px; margin:12px auto 24px;"></div>
+        <h2 class="head" style="font-size:28px;">Тебе холодно?</h2>
+        <p class="deck" style="margin-bottom: 40px;">Тогда нажми на кнопку.<br>Я согрею.</p>
+        
+        <svg class="heart-icon" viewBox="0 0 40 36" id="hugHeart">
+          <path d="M20 32C8 24 2 17 2 11 2 5 6 2 11 2c4 0 7 2 9 6 2-4 5-6 9-6 5 0 9 3 9 9 0 6-6 13-18 21z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+        </svg>
+        
+        <button class="hug-btn" id="hugBtn">Обнять</button>
+        <div class="hug-message" id="hugMessage">Ты в безопасности. Я рядом.</div>
+        
+        <div class="folio"><span>Тепло</span><span>44</span></div>
+      </div>
+    </section>
+
+    <!-- P45 · ТИРАЖ -->
+    <section class="page" data-page="45">
+      <div class="page-inner" style="justify-content:center; text-align:center;">
+        <div class="kicker">Тираж</div>
+        <div class="rule" style="width:60px; margin:14px auto 24px;"></div>
+        <h2 class="head" style="font-size:26px; line-height:1.15;">Тираж — <em>один</em> экземпляр.</h2>
+        <p class="deck" style="max-width:250px; margin:14px auto 0;">Второй экземпляр не существует. Не будет переиздания. Не будет копии.</p>
+        <p class="deck" style="max-width:250px; margin:14px auto 0;">Береги его.</p>
+        <p class="deck hand" style="font-family:var(--hand); font-style:normal; font-size:20px; color:var(--ink); margin-top:24px; transform:rotate(-2deg);">И себя.</p>
+        <div class="folio"><span>Тираж</span><span>45</span></div>
+      </div>
+    </section>
+
+    <!-- P46 · BACK COVER -->
+    <section class="page" data-page="46">
+      <div class="page-inner back-cover">
+        <div class="kicker">Конец выпуска</div>
+        <div class="rule" style="width:50px; margin:14px auto 26px;"></div>
+        <div class="masthead">MUSE<sup>°</sup></div>
+        <div class="end">тираж закончен</div>
+        <div class="heart"><svg viewBox="0 0 40 36"><use href="#heart"/></svg></div>
+        <div class="fine">Nº 01 · Private Edition · Only one copy</div>
+        <div class="folio"><span>MUSE</span><span>46</span></div>
+      </div>
+    </section>
+
+    <!-- P47 · AUDIO PLAYER -->
+    <section class="page page-dark" data-page="47">
+      <div class="page-inner">
+        <div class="spotify-ui">
+          <div class="spotify-top">
+            <div class="spotify-cover">
+              <img src="audio/cover.jpg" onerror="this.src='photos/01-cover.jpg'; this.onerror=null;" alt="Обложка">
+            </div>
+            <div class="spotify-info">
+              <div class="spotify-title">Как же</div>
+              <div class="spotify-artist">MACAN, Kiliana</div>
+            </div>
+            <div class="spotify-heart">♡</div>
+          </div>
+          
+          <div class="spotify-progress-container">
+            <div class="spotify-time" id="curTime">0:00</div>
+            <div class="spotify-bar-bg" id="barBg">
+              <div class="spotify-bar-fill" id="progressBar"></div>
+              <div class="spotify-bar-dot" id="progressDot"></div>
+            </div>
+            <div class="spotify-time" id="totTime">0:00</div>
+          </div>
+          
+          <div class="spotify-controls">
+            <svg class="spotify-icon" viewBox="0 0 24 24"><path d="M16 3h5v5h-5zM4 3h5v5H4zM16 16h5v5h-5zM4 16h5v5H4z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            <svg class="spotify-icon" viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16z" fill="currentColor"/><path d="M5 19V5" stroke="currentColor" stroke-width="2"/></svg>
+            <button class="spotify-play" id="playBtn">
+              <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+              <svg id="pauseIcon" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="currentColor"/></svg>
+            </button>
+            <svg class="spotify-icon" viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4z" fill="currentColor"/><path d="M19 5v14" stroke="currentColor" stroke-width="2"/></svg>
+            <svg class="spotify-icon" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.3 5.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 18v-6h6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          </div>
+          
+          <div class="spotify-lyrics-wrapper">
+            <div class="lyrics-label">ТЕКСТ ПЕСНИ</div>
+            <div class="lyrics-scroll" id="lyricsScroll">
+              <div class="lyric-line" data-time="0">[Интро: Kiliana & MACAN]</div>
+              <div class="lyric-line" data-time="3">А-а-а<br>М-м-м (Е, е)</div>
+              <div class="lyric-line" data-time="8">[Куплет 1: MACAN]</div>
+              <div class="lyric-line" data-time="10">Я свободен, но я звоню тебе, чтоб найти повод плена</div>
+              <div class="lyric-line" data-time="14">Твои пальцы в напряжении</div>
+              <div class="lyric-line" data-time="17">Ожоги в области рук — это ток по венам</div>
+              <div class="lyric-line" data-time="21">Уставшие лампы так смело засветят</div>
+              <div class="lyric-line" data-time="25">Тени вспотевших тел на стенах, а</div>
+              <div class="lyric-line" data-time="29">Как в самых трушных сценах (Е-е)</div>
+              <div class="lyric-line" data-time="32">И как в самых лучших сценах (Воу)</div>
+              <div class="lyric-line" data-time="35">Личных, и таких нужных сценах</div>
+              <div class="lyric-line" data-time="39">Двое вылетели из системы, как выстрелы</div>
+              <div class="lyric-line" data-time="43">Искренность искрами, встали, не выспались</div>
+              <div class="lyric-line" data-time="47">Не могу остановиться, влюбился, ты остановись на мне</div>
+              <div class="lyric-line" data-time="52">Я не хочу чтобы ты была среди девочек, что научились на мне</div>
+              <div class="lyric-line" data-time="57">Не хочу говорить себе перед сном: «Отпусти, так получилось, Андрей»</div>
+              
+              <div class="lyric-line" data-time="63">[Припев: Kiliana & MACAN]</div>
+              <div class="lyric-line" data-time="65">Как же я люблю тебя, им не понять</div>
+              <div class="lyric-line" data-time="69">Как же я боюсь тебя потерять</div>
+              <div class="lyric-line" data-time="73">Кажется, что матрица не хочет нас замечать</div>
+              <div class="lyric-line" data-time="77">Мне хочется закричать, тихо тебе закричать</div>
+              <div class="lyric-line" data-time="82">Как же я люблю тебя, им не понять</div>
+              <div class="lyric-line" data-time="86">Как же я боюсь тебя потерять</div>
+              <div class="lyric-line" data-time="90">Кажется, что матрица не хочет нас замечать</div>
+              <div class="lyric-line" data-time="94">Мне хочется закричать, тихо тебе закричать (Е, е, е)</div>
+
+              <div class="lyric-line" data-time="99">[Куплет 2: MACAN]</div>
+              <div class="lyric-line" data-time="101">Линии рук (Воу), линии плеч (Воу)</div>
+              <div class="lyric-line" data-time="105">Линии губ (Воу), тени от свеч</div>
+              <div class="lyric-line" data-time="109">Пишу, что хочу тебя, пишешь мне что-то</div>
+              <div class="lyric-line" data-time="113">Что после прочтения я должен сжечь</div>
+              <div class="lyric-line" data-time="117">Речь о любви, да и только (Воу-воу)</div>
+              <div class="lyric-line" data-time="121">В их сердцах чисто помойка (Ага)</div>
+              <div class="lyric-line" data-time="125">Но кто я такой, чтоб судить?</div>
+              <div class="lyric-line" data-time="129">До тебя у меня получалось любить лишь на двойки (Воу, е)</div>
+              <div class="lyric-line" data-time="134">Па-па-патроны в жестокий мир</div>
+              <div class="lyric-line" data-time="138">Все наши чувства для него сюр (Е, е)</div>
+              <div class="lyric-line" data-time="142">Их любовь длится как перерыв</div>
+              <div class="lyric-line" data-time="145">И между ней ещё перекур</div>
+              <div class="lyric-line" data-time="149">Я восемьсот восемь, но перегруз</div>
+              <div class="lyric-line" data-time="153">Не ревновать я не научусь</div>
+              <div class="lyric-line" data-time="157">Я ебал все их реновации чувств</div>
+              <div class="lyric-line" data-time="161">Как они любят — я так не хочу (Е, е, е, эй)</div>
+
+              <div class="lyric-line" data-time="166">[Припев: Kiliana]</div>
+              <div class="lyric-line" data-time="168">Как же я люблю тебя, им не понять</div>
+              <div class="lyric-line" data-time="172">Как же я боюсь тебя потерять</div>
+              <div class="lyric-line" data-time="176">Кажется, что матрица не хочет нас замечать</div>
+              <div class="lyric-line" data-time="180">Мне хочется закричать, тихо тебе закричать</div>
+              <div class="lyric-line" data-time="185">Как же я люблю тебя, им не понять</div>
+              <div class="lyric-line" data-time="189">Как же я боюсь тебя потерять</div>
+              <div class="lyric-line" data-time="193">Кажется, что матрица не хочет нас замечать</div>
+              <div class="lyric-line" data-time="197">Мне хочется закричать, тихо тебе закричать</div>
+            </div>
+          </div>
+        </div>
+        
+        <button class="next-cinema-btn" id="goToCinemaBtn">Смотреть кино →</button>
+        
+        <audio id="audioEl" src="audio/music.mp3"></audio>
+        <div class="folio" style="color: rgba(255,255,255,0.4); z-index: 10; bottom: 10px;"><span>Музыка</span><span>47</span></div>
+      </div>
+    </section>
+
+    <!-- P48 · CINEMA -->
+    <section class="page page-cinema" data-page="48">
+      <div class="page-inner cinema-inner">
+        <div class="cinema-light"></div>
+        <div class="cinema-grain"></div>
+        
+        <div class="cinema-content">
+          <div class="cinema-title">MUSE CINEMA</div>
+          
+          <div class="cinema-heart">
+            <svg viewBox="0 0 40 36"><path d="M20 32C8 24 2 17 2 11 2 5 6 2 11 2c4 0 7 2 9 6 2-4 5-6 9-6 5 0 9 3 9 9 0 6-6 13-18 21z" fill="#c8102e" stroke="none"/></svg>
+          </div>
+          
+          <div class="cinema-text">
+            <span class="line1">Ты — мой самый любимый человек.</span>
+            <span class="line2">Я тебя очень сильно люблю.</span>
+          </div>
+          
+          <div class="cinema-end">Конец.</div>
+        </div>
+      </div>
+      <div class="folio" style="color: rgba(255,255,255,0.3); z-index: 10; bottom: 16px;"><span>Кинотеатр</span><span>48</span></div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ============ CONTROLS ============ -->
+<div class="controls">
+  <button class="nav-btn" id="prevBtn" aria-label="Назад">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+  </button>
+  <div class="counter"><b id="curNum">01</b> / <span id="totNum">48</span></div>
+  <button class="nav-btn" id="nextBtn" aria-label="Вперёд">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+  </button>
+</div>
+
+<script>
+(function(){
+  const book   = document.getElementById('book');
+  const pages  = Array.from(book.querySelectorAll('.page'));
+  const total  = pages.length;
+  let current  = 0;
+  let locked   = false;
+
+  const curNum  = document.getElementById('curNum');
+  const totNum  = document.getElementById('totNum');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  totNum.textContent = String(total).padStart(2,'0');
+
+  function layout(){
+    pages.forEach((p, i) => {
+      p.classList.remove('is-active','is-past','is-future');
+      if (i < current){ p.classList.add('is-past');   p.style.zIndex = i + 1; }
+      else if (i === current){ p.classList.add('is-active'); p.style.zIndex = total + 20; }
+      else { p.classList.add('is-future'); p.style.zIndex = total - i; }
+    });
+    curNum.textContent = String(current + 1).padStart(2,'0');
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === total - 1;
+
+    // Resize canvas if current page is the drawing page
+    if (current === 42) { // index of P43
+      setTimeout(resizeCanvas, 100);
+    }
+  }
+
+  function go(dir){
+    if (locked) return;
+    const target = current + dir;
+    if (target < 0 || target >= total) return;
+    locked = true;
+    const moving = dir > 0 ? pages[current] : pages[target];
+    moving.classList.add('flipping');
+    current = target;
+    layout();
+    setTimeout(() => { moving.classList.remove('flipping'); locked = false; }, 840);
+  }
+
+  function jumpTo(targetIndex){
+    if (locked) return;
+    if (targetIndex === current || targetIndex < 0 || targetIndex >= total) return;
+    current = targetIndex;
+    layout();
+  }
+
+  nextBtn.addEventListener('click', () => go(1));
+  prevBtn.addEventListener('click', () => go(-1));
+
+  document.querySelectorAll('[data-jump]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      const t = parseInt(el.dataset.jump, 10) - 1;
+      jumpTo(t);
+    });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); go(1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'PageUp'){ e.preventDefault(); go(-1); }
+  });
+
+  let sx = 0, sy = 0, tracking = false;
+  window.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+    tracking = true;
+  }, {passive:true});
+  window.addEventListener('touchend', (e) => {
+    if (!tracking) return;
+    tracking = false;
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if (current === 42) return; // Don't swipe on canvas
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
+  }, {passive:true});
+
+  // ============ GIFT BOX ============
+  const giftBox = document.getElementById('giftBox');
+  const enterBtn = document.getElementById('enterBtn');
+  
+  if(giftBox) {
+    giftBox.addEventListener('click', () => {
+      giftBox.classList.add('untied');
+    });
+  }
+  
+  if(enterBtn) {
+    enterBtn.addEventListener('click', () => {
+      go(1); // Go to cover (P2)
+    });
+  }
+
+  // ============ FLOATING HEARTS ============
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.nav-btn') || e.target.closest('.toc') || e.target.closest('.hug-btn') || e.target.closest('.love-btn') || e.target.closest('.spotify-controls') || e.target.closest('#clearCanvasBtn') || e.target.closest('#goToCinemaBtn') || e.target.closest('.gift-box') || e.target.closest('#enterBtn')) return;
+    if (current === 42) return; 
+    
+    const heart = document.createElement('div');
+    heart.className = 'floating-heart';
+    heart.innerHTML = '❤️';
+    heart.style.left = e.clientX + 'px';
+    heart.style.top = e.clientY + 'px';
+    document.body.appendChild(heart);
+    setTimeout(() => heart.remove(), 1500);
+  });
+
+  // ============ DRAWING CANVAS ============
+  const canvas = document.getElementById('drawingCanvas');
+  const ctx = canvas.getContext('2d');
+  let isDrawing = false;
+  
+  function resizeCanvas() {
+    if(!canvas) return;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
+    
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#c8102e'; // Red
+    
+    if (tempCanvas.width > 0) {
+      ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
+  if(canvas) {
+    canvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    });
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDrawing) return;
+      const pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    });
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+    canvas.addEventListener('mouseleave', () => isDrawing = false);
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      isDrawing = true;
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    }, {passive: false});
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!isDrawing) return;
+      const pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }, {passive: false});
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      isDrawing = false;
+    }, {passive: false});
+  }
+
+  const clearBtn = document.getElementById('clearCanvasBtn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+  }
+
+  // ============ HUG PAGE ============
+  const hugBtn = document.getElementById('hugBtn');
+  const hugMessage = document.getElementById('hugMessage');
+  const hugHeart = document.getElementById('hugHeart');
+  
+  if (hugBtn) {
+    hugBtn.addEventListener('click', () => {
+      hugMessage.classList.add('show');
+      hugHeart.style.transform = 'scale(1.5)';
+      hugHeart.style.fill = 'var(--red)';
+      setTimeout(() => {
+        hugHeart.style.transform = 'scale(1)';
+        hugHeart.style.fill = 'none';
+      }, 1000);
+    });
+  }
+
+  // ============ LOVE COUNTER ============
+  const loveBtn = document.getElementById('loveBtn');
+  const loveCount = document.getElementById('loveCount');
+  let count = 1;
+  
+  if (loveBtn) {
+    loveBtn.addEventListener('click', () => {
+      count++;
+      loveCount.textContent = count;
+      loveCount.classList.add('bump');
+      setTimeout(() => loveCount.classList.remove('bump'), 150);
+    });
+  }
+
+  // ============ REVEAL BUTTON ============
+  const revealBtn = document.getElementById('revealBtn');
+  if (revealBtn) {
+    revealBtn.addEventListener('click', () => {
+      revealBtn.textContent = '→';
+      setTimeout(() => jumpTo(41), 120); // Jump to Love counter (P42 -> index 41)
+    });
+  }
+
+  // ============ GO TO CINEMA ============
+  const goToCinemaBtn = document.getElementById('goToCinemaBtn');
+  if (goToCinemaBtn) {
+    goToCinemaBtn.addEventListener('click', () => {
+      jumpTo(47); // index of P48
+    });
+  }
+
+  // ============ AUDIO PLAYER & SYNCED LYRICS ============
+  const audio = document.getElementById('audioEl');
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const pauseIcon = document.getElementById('pauseIcon');
+  const progressBar = document.getElementById('progressBar');
+  const curTimeEl = document.getElementById('curTime');
+  const totTimeEl = document.getElementById('totTime');
+  const barBg = document.getElementById('barBg');
+  
+  const lyricsScroll = document.getElementById('lyricsScroll');
+  const lyricLines = Array.from(document.querySelectorAll('.lyric-line'));
+  let activeLineIndex = -1;
+
+  function formatTime(sec) {
+    if (isNaN(sec)) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  }
+
+  if(playBtn) {
+    playBtn.addEventListener('click', () => {
+      if (audio.paused) {
+        audio.play();
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = 'block';
+      } else {
+        audio.pause();
+        playIcon.style.display = 'block';
+        pauseIcon.style.display = 'none';
+      }
+    });
+  }
+
+  audio.addEventListener('timeupdate', () => {
+    const pct = (audio.currentTime / audio.duration) * 100;
+    progressBar.style.width = `${pct}%`;
+    curTimeEl.textContent = formatTime(audio.currentTime);
+    if (!isNaN(audio.duration)) {
+      totTimeEl.textContent = formatTime(audio.duration);
+    }
+
+    let newIndex = -1;
+    for (let i = 0; i < lyricLines.length; i++) {
+      const time = parseFloat(lyricLines[i].dataset.time);
+      if (audio.currentTime >= time) {
+        newIndex = i;
+      } else {
+        break;
+      }
+    }
+
+    if (newIndex !== activeLineIndex && newIndex !== -1) {
+      if (activeLineIndex >= 0 && lyricLines[activeLineIndex]) {
+        lyricLines[activeLineIndex].classList.remove('active');
+      }
+      
+      activeLineIndex = newIndex;
+      const currentLine = lyricLines[activeLineIndex];
+      currentLine.classList.add('active');
+
+      // Точный рассчет позиции для идеального центрирования
+      const containerHeight = lyricsScroll.clientHeight;
+      const lineOffsetTop = currentLine.offsetTop;
+      const lineHeight = currentLine.clientHeight;
+      
+      const scrollTarget = lineOffsetTop - (containerHeight / 2) + (lineHeight / 2);
+      
+      lyricsScroll.scrollTo({
+        top: scrollTarget,
+        behavior: 'smooth'
+      });
+    }
+  });
+
+  audio.addEventListener('loadedmetadata', () => {
+    totTimeEl.textContent = formatTime(audio.duration);
+  });
+
+  if(barBg) {
+    barBg.addEventListener('click', (e) => {
+      const rect = barBg.getBoundingClientRect();
+      const pos = (e.clientX - rect.left) / rect.width;
+      if (!isNaN(audio.duration)) {
+        audio.currentTime = Math.max(0, Math.min(1, pos)) * audio.duration;
+      }
+    });
+  }
+
+  lyricLines.forEach(line => {
+    line.addEventListener('click', () => {
+      const time = parseFloat(line.dataset.time);
+      if (!isNaN(audio.duration)) {
+        audio.currentTime = time;
+        if (audio.paused) {
+          audio.play();
+          playIcon.style.display = 'none';
+          pauseIcon.style.display = 'block';
+        }
+      }
+    });
+  });
+
+  layout();
+})();
+</script>
+</body>
+</html>
